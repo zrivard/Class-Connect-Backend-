@@ -1,22 +1,31 @@
 var app = require('express')();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
-var admin = require("firebase-admin");
+const admin = require("firebase-admin");
 var port = process.env.PORT || 8080;
 
 app.get('/', (req, res) => {
 	res.sendFile(__dirname + "/index.html");
 });
 
-// Fetch the service account key JSON file contents
-var serviceAccount = require(__dirname + "/service-account.json");
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://classconnect-220321.firebaseio.com"
+app.get('/other', (req, res) => {
+	res.sendFile(__dirname + "/otherindex.html");
 });
 
-var ref = firebase.app().database().ref();
+
+// Fetch the service account key JSON file contents
+const serviceAccount = require(__dirname + '/service-account.json');
+
+admin.initializeApp({
+	credential: admin.credential.cert(serviceAccount)
+});
+
+
+
+
+const db = admin.firestore();
+
+
 
 io.on('connection', function(socket){
 	console.log("user connected");
@@ -28,6 +37,18 @@ io.on('connection', function(socket){
   	socket.on('chat message', function(msg){
     	console.log('message: ' + msg);
     	io.emit('chat message', msg);
+    	
+    	var obj = JSON.parse(msg);
+    	var date = new Date();
+    	
+    	var db_message = {
+    		display_name: obj.display_name,
+			message: obj.message,
+			timestamp: date.getTime(),
+			user_id: obj.userid
+    	}
+    	
+    	db.collection('CPEN_321').add(db_message);
   	});
 });
 
