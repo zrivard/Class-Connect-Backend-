@@ -1,7 +1,7 @@
 var app = require('express')();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
-const admin = require("firebase-admin");
+var db = require('./firebase');
 var port = process.env.PORT || 8080;
 
 app.get('/', (req, res) => {
@@ -13,17 +13,12 @@ app.get('/other', (req, res) => {
 });
 
 
-// Fetch the service account key JSON file contents
-const serviceAccount = require(__dirname + '/service-account.json');
-
-admin.initializeApp({
-	credential: admin.credential.cert(serviceAccount)
+app.get('/change-room', (req, res) => {
+	var class_hash = req.param('class', 0);
+	res.send(db.enter_room(class_hash));
+	//res.send(class_hash);
+	//res.sendFile(__dirname + "/otherindex.html");
 });
-
-
-
-
-const db = admin.firestore();
 
 
 
@@ -33,22 +28,14 @@ io.on('connection', function(socket){
 	socket.on('disconnect', function(){
     	console.log('user disconnected');
   	});
-  	
+ 
+ 
   	socket.on('chat message', function(msg){
     	console.log('message: ' + msg);
     	io.emit('chat message', msg);
     	
-    	var obj = JSON.parse(msg);
-    	var date = new Date();
+    	db.save_message(msg);
     	
-    	var db_message = {
-    		display_name: obj.display_name,
-			message: obj.message,
-			timestamp: date.getTime(),
-			user_id: obj.userid
-    	}
-    	
-    	db.collection('CPEN_321').add(db_message);
   	});
 });
 
