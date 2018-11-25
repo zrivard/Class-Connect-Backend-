@@ -14,7 +14,7 @@ app.get('/other', (req, res) => {
 
 
 app.get('/change-room', (req, res) => {
-	var class_hash = req.param('class', 0);
+	var class_hash = req.param('class');
 	res.send(db.enter_room(class_hash));
 	//res.send(class_hash);
 	//res.sendFile(__dirname + "/otherindex.html");
@@ -23,7 +23,13 @@ app.get('/change-room', (req, res) => {
 
 
 io.on('connection', function(socket){
-	console.log("user connected");
+	
+	/*Default to connect to room 'default'*/
+	socket.join('default', function(){
+		let rooms = Object.keys(socket.rooms);
+		socket.room_now = 'default';
+		console.log(rooms);
+	});
 	
 	socket.on('disconnect', function(){
     	console.log('user disconnected');
@@ -36,6 +42,16 @@ io.on('connection', function(socket){
     	
     	db.save_message(msg);
     	
+  	});
+  	
+  	socket.on('change room', function(room){
+  		console.log("Socket leaving room: ", socket.room_now);
+  		socket.leave(socket.room_now);
+  		socket.join(room, function(){
+  			socket.room_now = room;
+  			console.log("Socket joined room: ", socket.room_now);
+  		});
+  		
   	});
 });
 
