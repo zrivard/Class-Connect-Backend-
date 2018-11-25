@@ -15,44 +15,38 @@ const db = admin.firestore();
 module.exports = {
 	
 	save_message: function(msg) {
-		/*ZR_FIXME, remove this parsing when working from the app
-		 as using the web browser simply sends a string. Should
-		 just be able to go msg.uuid and such*/
-		//var obj = JSON.parse(msg);
-	
-		var display_name = msg.display_name;
-		var message		 = msg.message;
-		var class_hash 	 = msg.class_hash;
-		var user 	     = msg.uuid;
 		
 		var date = new Date();
 		
 		var db_message = {
-			display_name: display_name,
-			message: message,
-			timestamp: date.getTime(),
-			user_id: user
+			display_name: 	msg.display_name,
+			message: 		msg.message,
+			user_id: 		msg.uuid,
+			classroom: 		msg.classroom,
+			question_id: 	msg.question_id,
+			
+			timestamp: date.getTime()
 		};
 		
-		add_msg_to_db(db_message, user, class_hash);
+		add_msg_to_db(db_message, msg.uuid);
 				
 		
 	},
 	
-	enter_room: function(class_hash){
+	enter_room: function(question){
 		
 		var json = {};
 		var messages;
 		
 		/* Make sure the return knows what class it was for */
-		var class_k = "Class";
-		json[class_k] = class_hash;
+		var class_k = "Question";
+		json[class_k] = question;
 		
 		/* Get the message from the database */
 		var msg_k = "Messages";
 		json[msg_k] = [];
 		
-		messages = get_messages(class_hash);
+		messages = get_messages(question);
 		console.log("JSON-STR (no DB): " + messages);
 		
 		json[msg_k].push(messages);
@@ -78,29 +72,13 @@ var validate_user = function(user_id) {
 	return promise;
 };
 
-var validate_room = function(passed, room){
-	var roomRef = db.collection('messages').doc(room);
-	
-	
-	var promise = new Promise(function(resolve){
-		roomRef.get().then(function(room_doc){
-			if(room_doc.exists && passed){
-				resolve(true);
-			} else {
-				resolve(passed);
-			}
-		});
-	});
-	return promise;
-};
 
-
-var push_message = function(passed, msg, room){
-	var roomRef = db.collection('messages').doc(room);
+var push_message = function(passed, msg){
+	var roomRef = db.collection('messages');
 	
 	var promise = new Promise(function(resolve){
 		if(passed){
-			roomRef.collection('messages').add(msg);
+			roomRef.add(msg);
 		}
 		resolve(passed);
 	});
@@ -108,27 +86,26 @@ var push_message = function(passed, msg, room){
 	return promise;
 };
 
-function add_msg_to_db(msg, user_id, room){
+function add_msg_to_db(msg, user_id){
 	async (function () {
 			
 			var passed;
 			passed = await (validate_user(user_id));
-			passed = await (validate_room(passed, room));
-			passed = await (push_message(passed, msg, room));
+			passed = await (push_message(passed, msg));
 			
 		    await (console.log("Added message with status: " + passed));
 		})();
 		
 }
 
-function get_messages(room){
-	var roomRef = db.collection('messages').doc(room).collection('messages');
+function get_messages(question){
 	var json = [];
 	var sync = true;
 	
-	console.log("trying to get messages from room: " + room);
+	console.log("trying to get messages for quetion: " + question);
 		
-	
+	//Get all the messages that are for all rooms
+	var roomRef = db.collection('messages').where('question_id', '==', 'ALL');
 	roomRef.get().then(function(querySnapshot){
 		querySnapshot.forEach(function(doc){
 			console.log(doc.id, "=>", doc.data());
@@ -137,31 +114,19 @@ function get_messages(room){
 		
 		sync = false;
 	});
+	while(sync) {synch.sleep(100);}
 	
+	//Get all the messages that are for just this question
+	roomRef = db.collection('messages').where('question_id', '==', question);
+	roomRef.get().then(function(querySnapshot){
+		querySnapshot.forEach(function(doc){
+			console.log(doc.id, "=>", doc.data());
+			json.push(doc.data());
+		});
+		
+		sync = false;
+	});
 	while(sync) {synch.sleep(100);}
 	return json;
 }
 
-
-
-function get_messages_from_db(class_hash){
-	
-	var json = {};
-	var messages;
-	
-	/* Make sure the return knows what class it was for */
-	var class_k = "Class";
-	json[class_k] = class_hash;
-	
-	/* Get the message from the database */
-	var msg_k = "Messages";
-	json[msg_k] = [];
-	
-	messages = get_messages(class_hash);
-	console.log("JSON-STR (no DB): " + messages);
-	
-	json[msg_k].push(messages);
-	
-	return JSON.stringify(json);
-
-}

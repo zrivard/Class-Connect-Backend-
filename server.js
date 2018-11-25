@@ -14,10 +14,8 @@ app.get('/other', (req, res) => {
 
 
 app.get('/change-room', (req, res) => {
-	var class_hash = req.param('class');
-	res.send(db.enter_room(class_hash));
-	//res.send(class_hash);
-	//res.sendFile(__dirname + "/otherindex.html");
+	var question = req.param('question-id');
+	res.send(db.enter_room(question));
 });
 
 
