@@ -23,6 +23,11 @@ app.get('/get-questions', (req, res) => {
 	res.send(db.get_questions(classroom));
 });
 
+app.get('/get-class-info', (req, res) => {
+	var classroom = req.param('class');
+	res.send(db.get_class(classroom));
+});
+
 
 app.post('/ask-question', function (req, res) {
   var body = req.body;

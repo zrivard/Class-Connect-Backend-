@@ -44,12 +44,11 @@ module.exports = {
 		
 		/* Get the message from the database */
 		var msg_k = "Messages";
-		json[msg_k] = [];
 		
 		messages = get_questions_messages(question);
 		console.log("JSON-STR (no DB): " + messages);
 		
-		json[msg_k].push(messages);
+		json[msg_k] = messages;
 		
 		return json;
 	},
@@ -62,7 +61,7 @@ module.exports = {
 		var date = new Date();
 		var question_obj = {
 			user_id:	params.user_id,
-			text: 		params.question,
+			question:	params.question,
 			classroom: 	params.classroom,
 			id: 		question.id,	
 			timestamp: 	date.getTime()
@@ -74,7 +73,24 @@ module.exports = {
 	},
 	
 	get_questions: function(classroom){
-		return get_class_questions(classroom);
+		
+		var json = {};
+		
+		var name_k = "Classroom";
+		json[name_k] = classroom;
+		
+		var questions_k = "Questions";
+		json[questions_k] = get_class_questions(classroom);
+		
+		return json;
+	},
+	
+	get_class: function(classroom){
+		return get_class_information(classroom);
+	},
+	
+	set_user_classes: function(data){
+		
 	}
 };
 
@@ -166,16 +182,11 @@ function get_questions_messages(question){
 }
 
 function get_class_questions(classroom){
-	var json = {};
 	var sync = true;
 	
-	var classroom_k = "Classroom";
-	var messages_k = "Messages";
+	var json = [];
 	
-	json[classroom_k] = classroom;
-	json[messages_k] = [];
-	
-	console.log("trying to get messages for classroom: " + classroom);
+	console.log("trying to get questions for classroom: " + classroom);
 		
 	//Get all the messages that are for all classes
 	var roomRef = db.collection('questions').where('classroom', '==', 'ALL');
@@ -184,7 +195,7 @@ function get_class_questions(classroom){
 			if(DEBUG){
 				console.log(doc.id, "=>", doc.data());
 			}
-			json[messages_k].push(doc.data());
+			json.push(doc.data());
 		});
 		
 		sync = false;
@@ -199,15 +210,74 @@ function get_class_questions(classroom){
 			if(DEBUG){
 				console.log(doc.id, "=>", doc.data());
 			}
-			json[messages_k].push(doc.data());
+			json.push(doc.data());
 		});
 		
 		sync = false;
 	});
 	while(sync) {synch.sleep(100);}
 	
-	//Order the messages by timestamp
-	json[messages_k].sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
+	//Order the questions by timestamp
+	json.sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
+	
+	return json;
+}
+
+function get_class_members(classroom){
+	var sync = true;
+	var members = [];
+	
+	var membersRef = db.collection('classes').doc(classroom);
+	
+	membersRef.get().then(function(doc){
+		members = doc.data().members;
+		sync = false;
+	});
+		
+	while(sync) {synch.sleep(100);}
+	
+	return members;
+}
+
+function get_class_active_times(classroom){
+	var sync = true;
+	var times;
+	
+	var timesRef = db.collection('classes').doc(classroom);
+	
+	timesRef.get().then(function(doc){
+			times = doc.data().dayTimeActive;
+			sync = false;
+	});
+	
+	while(sync) {synch.sleep(100);}
+	
+	return times;
+}
+
+function get_class_information(classroom){
+	//What we need
+	/*
+	 * -Class name
+	 * -Class questions
+	 * -Class members
+	 * -Class times
+	 */
+	
+	var json = {};
+	
+	
+	var name_k = "Classroom";
+	json[name_k] = classroom;
+	
+	var questions_k = "Questions";
+	json[questions_k] = get_class_questions(classroom);
+	
+	var members_k = "Members";
+	json[members_k] = get_class_members(classroom);
+	
+	var active_k = "ActiveTimes";
+	json[active_k] = get_class_active_times(classroom);
 	
 	return json;
 }
