@@ -3,6 +3,8 @@ var await = require('asyncawait/await');
 var synch = require('deasync');
 const admin = require("firebase-admin");
 
+const DEBUG = 0;
+
 
 // Fetch the service account key JSON file contents
 const serviceAccount = require(__dirname + '/service-account.json');
@@ -29,8 +31,6 @@ module.exports = {
 		};
 		
 		add_msg_to_db(db_message, msg.uuid);
-				
-		
 	},
 	
 	enter_room: function(question){
@@ -46,12 +46,35 @@ module.exports = {
 		var msg_k = "Messages";
 		json[msg_k] = [];
 		
-		messages = get_messages(question);
+		messages = get_questions_messages(question);
 		console.log("JSON-STR (no DB): " + messages);
 		
 		json[msg_k].push(messages);
 		
 		return json;
+	},
+	
+	ask_question: function(params){
+		
+		//Create a new document and then add the data into it
+		var question = db.collection('questions').doc();
+		
+		var date = new Date();
+		var question_obj = {
+			user_id:	params.user_id,
+			text: 		params.question,
+			classroom: 	params.classroom,
+			id: 		question.id,	
+			timestamp: 	date.getTime()
+		};
+		
+		question.set(question_obj);
+		return question_obj;
+		
+	},
+	
+	get_questions: function(classroom){
+		return get_class_questions(classroom);
 	}
 };
 
@@ -86,6 +109,9 @@ var push_message = function(passed, msg){
 	return promise;
 };
 
+
+
+
 function add_msg_to_db(msg, user_id){
 	async (function () {
 			
@@ -98,7 +124,7 @@ function add_msg_to_db(msg, user_id){
 		
 }
 
-function get_messages(question){
+function get_questions_messages(question){
 	var json = [];
 	var sync = true;
 	
@@ -108,7 +134,24 @@ function get_messages(question){
 	var roomRef = db.collection('messages').where('question_id', '==', 'ALL');
 	roomRef.get().then(function(querySnapshot){
 		querySnapshot.forEach(function(doc){
-			console.log(doc.id, "=>", doc.data());
+			if(DEBUG){
+				console.log(doc.id, "=>", doc.data());
+			}
+			json.push(doc.data());
+		});
+		
+		sync = false;
+	});
+	while(sync) {synch.sleep(100);}
+	sync = true;
+	
+	//Get all the messages that are for just this question
+	roomRef = db.collection('messages').where('question_id', '==', question);
+	roomRef.get().then(function(querySnapshot){
+		querySnapshot.forEach(function(doc){
+			if(DEBUG){
+				console.log(doc.id, "=>", doc.data());
+			}
 			json.push(doc.data());
 		});
 		
@@ -116,17 +159,56 @@ function get_messages(question){
 	});
 	while(sync) {synch.sleep(100);}
 	
-	//Get all the messages that are for just this question
-	roomRef = db.collection('messages').where('question_id', '==', question);
+	//Order the messages by timestamp
+	json.sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
+	
+	return json;
+}
+
+function get_class_questions(classroom){
+	var json = {};
+	var sync = true;
+	
+	var classroom_k = "Classroom";
+	var messages_k = "Messages";
+	
+	json[classroom_k] = classroom;
+	json[messages_k] = [];
+	
+	console.log("trying to get messages for classroom: " + classroom);
+		
+	//Get all the messages that are for all classes
+	var roomRef = db.collection('questions').where('classroom', '==', 'ALL');
 	roomRef.get().then(function(querySnapshot){
 		querySnapshot.forEach(function(doc){
-			console.log(doc.id, "=>", doc.data());
-			json.push(doc.data());
+			if(DEBUG){
+				console.log(doc.id, "=>", doc.data());
+			}
+			json[messages_k].push(doc.data());
 		});
 		
 		sync = false;
 	});
 	while(sync) {synch.sleep(100);}
+	sync = true;
+	
+	//Get all the messages that are for just this class
+	roomRef = db.collection('questions').where('classroom', '==', classroom);
+	roomRef.get().then(function(querySnapshot){
+		querySnapshot.forEach(function(doc){
+			if(DEBUG){
+				console.log(doc.id, "=>", doc.data());
+			}
+			json[messages_k].push(doc.data());
+		});
+		
+		sync = false;
+	});
+	while(sync) {synch.sleep(100);}
+	
+	//Order the messages by timestamp
+	json[messages_k].sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
+	
 	return json;
 }
 

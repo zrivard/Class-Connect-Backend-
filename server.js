@@ -2,20 +2,31 @@ var app = require('express')();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 var db = require('./firebase');
+var bodyParser = require('body-parser');
 var port = process.env.PORT || 8080;
 
-app.get('/', (req, res) => {
-	res.sendFile(__dirname + "/index.html");
-});
+app.use(bodyParser.json());
 
-app.get('/other', (req, res) => {
-	res.sendFile(__dirname + "/otherindex.html");
+app.get('/', (req, res) => {
+	void req;
+	res.sendFile(__dirname + "/index.html");
 });
 
 
 app.get('/change-room', (req, res) => {
 	var question = req.param('question-id');
 	res.send(db.enter_room(question));
+});
+
+app.get('/get-questions', (req, res) => {
+	var classroom = req.param('class');
+	res.send(db.get_questions(classroom));
+});
+
+
+app.post('/ask-question', function (req, res) {
+  var body = req.body;
+  res.send(db.ask_question(body));
 });
 
 
@@ -36,7 +47,8 @@ io.on('connection', function(socket){
  
   	socket.on('chat message', function(msg){
     	console.log('message: ' + msg);
-    	io.emit('chat message', msg);
+    	
+    	socket.to(socket.room_now).emit('chat message', msg);
     	
     	db.save_message(msg);
     	
