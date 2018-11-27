@@ -39,8 +39,8 @@ module.exports = {
 		var messages;
 		
 		/* Make sure the return knows what class it was for */
-		var class_k = "Question";
-		json[class_k] = question;
+		var question_k = "Question";
+		json[question_k] = question;
 		
 		/* Get the message from the database */
 		var msg_k = "Messages";
@@ -91,6 +91,30 @@ module.exports = {
 	
 	set_user_classes: function(data){
 		
+	},
+	
+	get_user_classes: function(user){
+		
+		var json = {};
+		
+		var sync = true;
+		
+		var user_k = "User";
+		json[user_k] = user;
+		
+		var classes_k = "Classes";
+		var classes;
+		
+		var userRef = db.collection('users').doc(user);
+		userRef.get().then(function(doc){
+				classes = doc.data().enrolledClasses;
+				sync = false;
+		});
+		
+		while(sync) {synch.sleep(100);}
+		
+		json[classes_k] = classes;
+		return json;		
 	}
 };
 
@@ -256,16 +280,8 @@ function get_class_active_times(classroom){
 }
 
 function get_class_information(classroom){
-	//What we need
-	/*
-	 * -Class name
-	 * -Class questions
-	 * -Class members
-	 * -Class times
-	 */
-	
+
 	var json = {};
-	
 	
 	var name_k = "Classroom";
 	json[name_k] = classroom;

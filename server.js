@@ -28,11 +28,18 @@ app.get('/get-class-info', (req, res) => {
 	res.send(db.get_class(classroom));
 });
 
+app.get('/get-user-classes', (req, res) => {
+	var user = req.param('user');
+	res.send(db.get_user_classes(user));
+});
+
 
 app.post('/ask-question', function (req, res) {
   var body = req.body;
   res.send(db.ask_question(body));
 });
+
+
 
 
 
