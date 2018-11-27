@@ -204,16 +204,20 @@ function get_questions_messages(question){
 				console.log(doc.id, "=>", doc.data());
 			}
 			json.push(doc.data());
+			
 		});
 		
 		sync = false;
 	});
 	while(sync) {synch.sleep(100);}
 	
-	//Order the messages by timestamp
-	json.sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
+	//Only care about messages from today
+	var filtered = json.filter(date_is_today);
 	
-	return json;
+	//Order the messages by timestamp
+	filtered.sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
+	
+	return filtered;
 }
 
 function get_class_questions(classroom){
@@ -252,10 +256,13 @@ function get_class_questions(classroom){
 	});
 	while(sync) {synch.sleep(100);}
 	
-	//Order the questions by timestamp
-	json.sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
+	//Only care about questions from today
+	var filtered = json.filter(date_is_today);
 	
-	return json;
+	//Order the questions by timestamp
+	filtered.sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
+	
+	return filtered;
 }
 
 function get_class_members(classroom){
@@ -307,5 +314,20 @@ function get_class_information(classroom){
 	json[active_k] = get_class_active_times(classroom);
 	
 	return json;
+}
+
+
+function date_is_today(item){
+	
+	var timestamp = item.timestamp;
+	var today = new Date();
+	var to_check = new Date(timestamp);
+	
+	if(today.getDate() === to_check.getDate()
+		&& today.getFullYear() === to_check.getFullYear()
+		&& today.getMonth() === to_check.getMonth()){
+			return true;
+		}
+	return false;
 }
 
