@@ -39,6 +39,11 @@ app.post('/ask-question', function (req, res) {
   res.send(db.ask_question(body));
 });
 
+app.post('/set-classes', function (req, res) {
+  var body = req.body;
+  res.send(db.set_user_classes(body));
+});
+
 
 
 

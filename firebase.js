@@ -91,6 +91,16 @@ module.exports = {
 	
 	set_user_classes: function(data){
 		
+		console.log('Classes data: %j', data);
+		var userRef = db.collection('users').doc(data.user_id);
+		
+		var update_obj = {
+			enrolledClasses: data.enrolledClasses
+		};
+
+		userRef.update(update_obj);
+					
+		return data;
 	},
 	
 	get_user_classes: function(user){
@@ -108,6 +118,7 @@ module.exports = {
 		var userRef = db.collection('users').doc(user);
 		userRef.get().then(function(doc){
 				classes = doc.data().enrolledClasses;
+				
 				sync = false;
 		});
 		
