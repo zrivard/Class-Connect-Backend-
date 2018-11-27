@@ -13,9 +13,9 @@ app.get('/', (req, res) => {
 });
 
 
-app.get('/change-room', (req, res) => {
+app.get('/get-question-messages', (req, res) => {
 	var question = req.param('question-id');
-	res.send(db.enter_room(question));
+	res.send(db.get_messages(question));
 });
 
 app.get('/get-questions', (req, res) => {
@@ -33,6 +33,16 @@ app.get('/get-user-classes', (req, res) => {
 	res.send(db.get_user_classes(user));
 });
 
+app.get('/close-question', (req, res) => {
+	var question = req.param('question-id');
+	res.send(db.close_question(question));
+});
+
+app.get('/add-user', (req, res) => {
+	var uuid = req.param('uuid');
+	var name = req.param('name');
+	res.send(db.add_user(uuid, name));
+});
 
 app.post('/ask-question', function (req, res) {
   var body = req.body;

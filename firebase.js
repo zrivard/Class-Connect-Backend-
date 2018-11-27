@@ -12,6 +12,7 @@ const serviceAccount = require(__dirname + '/service-account.json');
 admin.initializeApp({
 	credential: admin.credential.cert(serviceAccount)
 });
+
 const db = admin.firestore();
 
 module.exports = {
@@ -33,7 +34,7 @@ module.exports = {
 		add_msg_to_db(db_message, msg.uuid);
 	},
 	
-	enter_room: function(question){
+	get_messages: function(question){
 		
 		var json = {};
 		var messages;
@@ -46,7 +47,6 @@ module.exports = {
 		var msg_k = "Messages";
 		
 		messages = get_questions_messages(question);
-		console.log("JSON-STR (no DB): " + messages);
 		
 		json[msg_k] = messages;
 		
@@ -63,7 +63,8 @@ module.exports = {
 			user_id:	params.user_id,
 			question:	params.question,
 			classroom: 	params.classroom,
-			id: 		question.id,	
+			id: 		question.id,
+			open:		true,
 			timestamp: 	date.getTime()
 		};
 		
@@ -91,7 +92,6 @@ module.exports = {
 	
 	set_user_classes: function(data){
 		
-		console.log('Classes data: %j', data);
 		var userRef = db.collection('users').doc(data.user_id);
 		
 		var update_obj = {
@@ -126,6 +126,48 @@ module.exports = {
 		
 		json[classes_k] = classes;
 		return json;		
+	},
+	
+	close_question: function(question){
+		
+		var questionRef = db.collection('questions').doc(question);
+		
+		var update_obj = {
+			open: false
+		};
+
+		questionRef.update(update_obj);
+		
+		//create
+					
+		return question;
+	},
+	
+	add_user: function(uuid, name){
+		
+		var sync = true;
+		var json;
+		
+		var user_obj = {
+			name: name,
+			uuid: uuid,
+			enrolledClasses: {}
+		};
+		
+		var userRef = db.collection('users').doc(uuid);
+		userRef.get().then(function(user_doc){
+			if(!user_doc.exists){
+				db.collection('users').doc(uuid).set(user_obj);
+				json = user_obj;
+			} else {
+				json = user_doc.data();
+			}
+			
+			sync = false;
+		});
+		
+		while(sync) {synch.sleep(100);}
+		return json;
 	}
 };
 
@@ -179,7 +221,6 @@ function get_questions_messages(question){
 	var json = [];
 	var sync = true;
 	
-	console.log("trying to get messages for quetion: " + question);
 		
 	//Get all the messages that are for all rooms
 	var roomRef = db.collection('messages').where('question_id', '==', 'ALL');
@@ -225,7 +266,6 @@ function get_class_questions(classroom){
 	
 	var json = [];
 	
-	console.log("trying to get questions for classroom: " + classroom);
 		
 	//Get all the messages that are for all classes
 	var roomRef = db.collection('questions').where('classroom', '==', 'ALL');
@@ -331,3 +371,10 @@ function date_is_today(item){
 	return false;
 }
 
+function create_file(data){
+	
+}
+
+function upload_file(file){
+	var storageRef = db.storage();
+}
