@@ -75,9 +75,11 @@ io.on('connection', function(socket){
   	socket.on('chat message', function(msg){
     	console.log('message: ' + msg);
     	
-    	socket.to(socket.room_now).emit('chat message', msg);
+    	var msg_obj = db.save_message(msg);
     	
-    	db.save_message(msg);
+    	io.to(socket.room_now).emit('chat message', msg_obj);
+    	
+    	
     	
   	});
   	
@@ -90,6 +92,25 @@ io.on('connection', function(socket){
   		});
   		
   	});
+  	
+  	socket.on('upvote message', function(msg){
+  		console.log('Upvote message: %j', msg);
+  		io.emit('upvote message', msg);
+  		
+  		db.upvote_message(msg.msgId);
+  	});
+  	
+  	socket.on('downvote message', function(msg){
+  		console.log('Downvote message: %j', msg);
+  		io.emit('downvote message', msg);
+  		
+  		db.downvote_message(msg.msgId);
+  	});
+  	
+  	socket.on('question post', function(msg){
+  		io.emit('question post', db.ask_question(msg));
+  	});
+  	
 });
 
 

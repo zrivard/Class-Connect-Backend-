@@ -21,17 +21,22 @@ module.exports = {
 		
 		var date = new Date();
 		
+		var message = db.collection('questions').doc();
+		
 		var db_message = {
 			display_name: 	msg.display_name,
 			message: 		msg.message,
 			user_id: 		msg.uuid,
 			classroom: 		msg.classroom,
 			question_id: 	msg.question_id,
+			message_id:		message.id,
+			upvotes:		0,
 			
 			timestamp: date.getTime()
 		};
 		
 		add_msg_to_db(db_message, msg.uuid);
+		return db_message;
 	},
 	
 	get_messages: function(question){
@@ -61,8 +66,10 @@ module.exports = {
 		var date = new Date();
 		var question_obj = {
 			user_id:	params.user_id,
-			question:	params.question,
+			title:		params.title,
+			body:		params.body,
 			classroom: 	params.classroom,
+			
 			id: 		question.id,
 			open:		true,
 			timestamp: 	date.getTime()
@@ -143,9 +150,10 @@ module.exports = {
 		return question;
 	},
 	
-	add_user: function(uuid, name){
+	add_user: function(uuid, url_name){
 		
 		var sync = true;
+		var name = url_name.replace('_', ' ');
 		var json;
 		
 		var user_obj = {
@@ -168,6 +176,45 @@ module.exports = {
 		
 		while(sync) {synch.sleep(100);}
 		return json;
+	},
+	
+	upvote_message: function(msg){
+		
+		var msgRef = db.collection('messages').doc(msg);
+		console.log("Trying to upvote message : " + msg);
+		
+		db.runTransaction(t => {
+		  return t.get(msgRef)
+		    .then(doc => {
+		      // Add one upvote to the message
+		      var new_upvotes = doc.data().upvotes + 1;
+		      t.update(msgRef, {upvotes: new_upvotes});
+		    });
+		}).then(result => {
+			void result;
+		  console.log('Transaction success!');
+		}).catch(err => {
+		  console.log('Transaction failure:', err);
+		});
+	},
+	
+	downvote_message: function(msg){
+		
+		var msgRef = db.collection('messages').doc(msg);
+		
+		db.runTransaction(t => {
+		  return t.get(msgRef)
+		    .then(doc => {
+		      // Add one upvote to the message
+		      var new_upvotes = doc.data().upvotes - 1;
+		      t.update(msgRef, {upvotes: new_upvotes});
+		    });
+		}).then(result => {
+			void result;
+		  console.log('Transaction success!');
+		}).catch(err => {
+		  console.log('Transaction failure:', err);
+		});
 	}
 };
 
@@ -190,11 +237,11 @@ var validate_user = function(user_id) {
 
 
 var push_message = function(passed, msg){
-	var roomRef = db.collection('messages');
+	var msgDoc = db.collection('messages').doc(msg.message_id);
 	
 	var promise = new Promise(function(resolve){
 		if(passed){
-			roomRef.add(msg);
+			msgDoc.set(msg);
 		}
 		resolve(passed);
 	});
